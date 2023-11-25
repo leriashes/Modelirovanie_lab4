@@ -21,7 +21,7 @@ def PrintFunction(c, m, n):
 	print(" → min", sep='', end='')
 		
 #печать заголовка таблицы
-def PrintHeader(num):
+def PrintHeader(num, val):
 	for _ in range(21 + 9 * num):
 		print("-", end='')
 
@@ -31,7 +31,7 @@ def PrintHeader(num):
 	print("Потребитель", end='')
 	for _ in range(9 * num - 12 - round((9 * num - 11) / 2)):
 		print(" ", end='')
-	print("| Запас")
+	print("|{: ^7}".format(val))
 
 	print("             |", end='')
 	for _ in range(9 * num - 1):
@@ -78,11 +78,18 @@ def PrintRow(numb, coefs, counted, res):
 	print()
 
 #печать последней строки таблицы - потребность
-def PrintBottom(res):
-	print(" Потребность |", end='')
+def PrintBottom(res, val):
+	print("{: ^13}|".format(val), end='')
 	for number in res:
 		print("{: ^8}|".format(number), end='')
 	print()
+	print()
+
+def PrintTable(num, val_head, val_bot, coefs, xcount, a, b):
+	PrintHeader(num, val_head)
+	for i in range(m):
+		PrintRow(i, coefs[i], xcount, a[i])
+	PrintBottom(b, val_bot)
 	print()
 
 f = open('input.txt')
@@ -133,10 +140,7 @@ print("\n")
 
 count = len([item for item in xcount if item >= 0])
 
-PrintHeader(n)
-for i in range(m):
-	PrintRow(i, c[i], xcount, a[i])
-PrintBottom(b)
+PrintTable(n, "Запас", "Потребность", c, xcount, a, b)
 
 while count < m + n - 1:
 
@@ -200,11 +204,7 @@ while count < m + n - 1:
 
 	xcount[res_k] = res
 
-	PrintHeader(n)
-	for i in range(m):
-		PrintRow(i, c[i], xcount, a[i])
-	PrintBottom(b)
-	print()
+	PrintTable(n, "Запас", "Потребность", c, xcount, a, b)
 	count = len([item for item in xcount if item >= 0])
 
 result = 0
@@ -214,3 +214,65 @@ for i in range(len(xcount)):
 		result += c[i // n][i % n] * xcount[i]
 
 print("Результат: F = ", result)
+
+
+print("\n\n\nМетод потенциалов\n")
+
+v = [0 for _ in range(n)]
+v_ready = [False for _ in range(n)]
+u = [0 for _ in range(m)]
+u_ready = [False for _ in range(m)]
+
+u_ready[0] = True
+
+
+row = 0
+
+while (not all(v_ready)) or (not all(u_ready)):
+	if u_ready[row]:
+		if not all(v_ready):
+			for i in range(n):
+				if xcount[row * n + i] >= 0 and not v_ready[i]:
+					v[i] = c[row][i] - u[row]
+					v_ready[i] = True
+					
+		if not all(u_ready):
+			for col in range(n):
+				if v_ready[col]:
+					for i in range(m):
+						if xcount[i * n + col] >= 0 and not u_ready[i]:
+							u[i] = c[i][col] - v[col]
+							u_ready[i] = True
+							if row == -1:
+								row = i - 1
+
+	row += 1
+
+	if row == m:
+		row = 0
+
+	
+
+PrintTable(n, "U", "V", c, xcount, u, v)
+
+otr = False
+print("\nОценки незадействованных маршрутов: ")
+for row in range(m):
+	for col in range(n):
+		if xcount[row * n + col] < 0:
+			print("A", end='')
+			PrintNumb(row)
+			print("B", end='')
+			PrintNumb(col)
+			print(": Δ", end='')
+			PrintNumb(row)
+			PrintNumb(col)
+			res = c[row][col] - (u[row] + v[col])
+			print(" =", res)
+
+			otr = (res < 0)
+			
+if otr:
+	print("\nЕсть отрицательная оценка! Возможно получение нового решения, как минимум, не хуже имеющегося.")
+else:
+	print("\nОтрицательных оценок нет! Найдено оптимальное решение.")
